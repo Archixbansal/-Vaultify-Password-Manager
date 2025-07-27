@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .dashboard-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(100vh - 80px);
+        flex-direction: column;
+        position: relative;
+        padding: 20px;
+    }
+
+    .main-center-box {
+        text-align: center;
+        padding: 40px 20px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        max-width: 700px;
+        width: 100%;
+        color: #fff;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    }
+    .main-center-box h2 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 20px;
+    }
+    .main-center-box p {
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+        color: #ddd;
+    }
+    .stats-card {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 15px;
+        margin: 20px auto;
+        font-size: 1.2rem;
+        font-weight: 600;
+        width: 70%;
+    }
+    .dashboard-buttons a {
+        margin: 10px;
+        padding: 12px 25px;
+        font-size: 1rem;
+        border-radius: 10px;
+        transition: 0.3s;
+        display: inline-block;
+    }
+    .btn-glass-primary {
+        background: rgba(59, 130, 246, 0.85);
+        color: #fff;
+        border: none;
+        font-weight: bold;
+    }
+    .btn-glass-primary:hover {
+        background: rgba(37, 99, 235, 1);
+        transform: scale(1.07);
+    }
+    .btn-glass-outline {
+        background: transparent;
+        border: 2px solid #fff;
+        color: #fff;
+        font-weight: bold;
+    }
+    .btn-glass-outline:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.07);
+    }
+
+    /* Security Tips */
+    .tip-box {
+        margin-top: 20px;
+        text-align: center;
+        font-size: 1rem;
+        background: rgba(255, 255, 255, 0.07);
+        padding: 10px;
+        border-radius: 10px;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+        color: #fff;
+    }
+    .tip-box h4 {
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
+    #tip-text {
+        font-size: 0.95rem;
+        transition: opacity 0.5s ease-in-out;
+    }
+
+    /* Recent Activity */
+    .recent-box {
+        position: fixed;
+        bottom: 40px;
+        left: 20px;
+        width: 280px;
+        max-height: 320px;
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 15px;
+        color: #fff;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        overflow-y: auto;
+    }
+    .recent-box h4 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+    .activity-item {
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        font-size: 0.9rem;
+        color: #ddd;
+    }
+    .activity-date {
+        font-size: 0.75rem;
+        color: #aaa;
+    }
+
+    /* Mobile Adjustments */
+    @media (max-width: 768px) {
+        .main-center-box {
+            padding: 20px 10px;
+            max-width: 95%;
+        }
+        .main-center-box h2 {
+            font-size: 1.8rem;
+        }
+        .stats-card {
+            width: 90%;
+            font-size: 1rem;
+        }
+        .recent-box {
+            position: static;
+            width: 100%;
+            margin-top: 20px;
+            max-height: 200px;
+        }
+    }
+</style>
+
+<div class="dashboard-wrapper">
+    <div class="main-center-box">
+        <h2> Welcome, {{ name }}!</h2>
+        <p>Here's an overview of your Vaultify account.</p>
+
+        <div class="stats-card">
+            Total Saved Passwords: {{ total }}
+        </div>
+
+        <div class="dashboard-buttons">
+            <a href="{{ url_for('add_password') }}" class="btn btn-glass-primary">+ Add New Password</a>
+            <a href="{{ url_for('view_passwords') }}" class="btn btn-glass-outline">View All Passwords</a>
+        </div>
+    </div>
+
+    <div class="tip-box mt-4">
+        <h4>🔐 Security Tips</h4>
+        <span id="tip-text">Use 2FA wherever possible!</span>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="recent-box">
+    <h4>🕒 Recent Activity</h4>
+    {% if recent %}
+        {% for item in recent %}
+            <div class="activity-item">
+                <strong>{{ item.account }}</strong> - {{ item.username }}
+                {% if item.added_at %}
+                    <div class="activity-date">(Added on {{ item.added_at }})</div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-light">No recent activity.</p>
+    {% endif %}
+</div>
+
+<script>
+    const tips = [
+        "Use 2FA wherever possible!",
+        "Never reuse the same password.",
+        "Change important passwords every 3 months.",
+        "Use a mix of uppercase, lowercase, numbers & symbols.",
+        "Don't share passwords over email or chat.",
+        "Use a password manager to store complex passwords.",
+        "Avoid using personal details in your passwords."
+    ];
+
+    let tipIndex = 0;
+    const tipText = document.getElementById("tip-text");
+
+    function showNextTip() {
+        tipText.style.opacity = 0;
+        setTimeout(() => {
+            tipIndex = (tipIndex + 1) % tips.length;
+            tipText.textContent = tips[tipIndex];
+            tipText.style.opacity = 1;
+        }, 500);
+    }
+
+    setInterval(showNextTip, 4000);
+</script>
+{% endblock %}

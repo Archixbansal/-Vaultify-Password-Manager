@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        padding: 30px 25px;
+        color: #fff;
+        max-width: 400px;
+        margin: 80px auto;
+    }
+    .glass-card h2 {
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    .form-control {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+    }
+    .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+    }
+    .btn-success {
+        background-color: #198754;
+        border: none;
+    }
+    .btn-success:hover {
+        background-color: #157347;
+    }
+    .link {
+        color: #0d6efd;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .link:hover {
+        text-decoration: underline;
+    }
+    /* Password Strength */
+    .strength-meter {
+        height: 6px;
+        border-radius: 5px;
+        margin-top: 5px;
+        background-color: rgba(255,255,255,0.2);
+        overflow: hidden;
+    }
+    .strength-bar {
+        height: 100%;
+        width: 0%;
+        transition: width 0.4s;
+    }
+</style>
+
+<div class="glass-card">
+    <h2>Create Account</h2>
+    {% if message %}
+    <div class="alert alert-info text-center">{{ message }}</div>
+    {% endif %}
+    <form method="POST">
+        <div class="mb-3">
+            <label>Name</label>
+            <input type="text" name="name" class="form-control" placeholder="Enter your name" required>
+        </div>
+        <div class="mb-3">
+            <label>Email</label>
+            <input type="email" name="email" class="form-control" placeholder="Enter your email" required>
+        </div>
+      <div class="mb-3">
+    <label>Password</label>
+    <input type="password" name="password" id="password" class="form-control" placeholder="Enter your password" required>
+    <div class="strength-meter">
+        <div id="strength-bar" class="strength-bar"></div>
+    </div>
+    <small id="strength-text" style="color:#fff; display:block; margin-top:5px; font-weight:600;"></small>
+</div>
+
+        <button type="submit" class="btn btn-success w-100">Register</button>
+    </form>
+    <div class="mt-3 text-center">
+        <a href="{{ url_for('login') }}" class="link">Already have an account? Login</a>
+    </div>
+</div>
+
+<script>
+    const passwordInput = document.getElementById('password');
+    const strengthBar = document.getElementById('strength-bar');
+    const strengthText = document.getElementById('strength-text');
+
+    passwordInput.addEventListener('input', () => {
+        const val = passwordInput.value;
+        let strength = 0;
+
+        if (val.length > 6) strength++;
+        if (val.match(/[A-Z]/)) strength++;
+        if (val.match(/[0-9]/)) strength++;
+        if (val.match(/[^A-Za-z0-9]/)) strength++;
+        if (val.length > 12) strength++;
+
+        const percent = (strength / 5) * 100;
+        strengthBar.style.width = percent + '%';
+
+        if (strength <= 1) {
+            strengthBar.style.backgroundColor = '#dc3545';
+            strengthText.textContent = 'Weak';
+        } else if (strength == 2) {
+            strengthBar.style.backgroundColor = '#fd7e14';
+            strengthText.textContent = 'Fair';
+        } else if (strength == 3) {
+            strengthBar.style.backgroundColor = '#ffc107';
+            strengthText.textContent = 'Good';
+        } else if (strength >= 4) {
+            strengthBar.style.backgroundColor = '#198754';
+            strengthText.textContent = 'Strong';
+        }
+    });
+</script>
+{% endblock %}

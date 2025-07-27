@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .glass-section {
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 15px;
+        padding: 40px;
+        color: #fff;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        text-align: center;
+        margin-top: 60px;
+    }
+
+    .glass-section h1 {
+        font-size: 3rem;
+        font-weight: bold;
+    }
+
+    .glass-section p.lead {
+        font-size: 1.2rem;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Change all feature text to white */
+    .glass-section .text-muted,
+    .feature-card p {
+        color: #fff !important;
+    }
+
+    .glass-btn-primary {
+        background: rgba(0, 123, 255, 0.3);
+        color: #fff;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        transition: 0.3s;
+        font-size: 1.1rem;
+        text-decoration: none;
+    }
+
+    .glass-btn-primary:hover {
+        background: rgba(0, 123, 255, 0.5);
+        transform: scale(1.05);
+    }
+
+    .glass-btn-outline {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 12px 30px;
+        border-radius: 8px;
+        transition: 0.3s;
+        font-size: 1.1rem;
+        text-decoration: none;
+    }
+
+    .glass-btn-outline:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.05);
+    }
+
+    .features-section {
+        margin-top: 50px;
+    }
+
+    .feature-card {
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 20px;
+        color: #fff;
+        transition: 0.3s;
+    }
+
+    .feature-card:hover {
+        background: rgba(255, 255, 255, 0.12);
+        transform: translateY(-5px);
+    }
+
+    .feature-card i {
+        font-size: 3rem;
+        margin-bottom: 10px;
+    }
+</style>
+
+<div class="glass-section">
+    <h1>Welcome to <span class="text-primary">Vaultify</span></h1>
+    <p class="lead mt-3">Your Digital Vault for Secure Passwords</p>
+    <p class="text-muted">Store, manage, and protect all your passwords in one safe place.</p>
+    
+    <div class="mt-4">
+        <a href="{{ url_for('register') }}" class="glass-btn-primary me-3">Get Started</a>
+        <a href="{{ url_for('login') }}" class="glass-btn-outline">Login</a>
+    </div>
+</div>
+
+<!-- Features -->
+<div class="row features-section text-center">
+    <div class="col-md-4 mb-4">
+        <div class="feature-card p-4">
+            <i class="bi bi-lock-fill text-primary"></i>
+            <h4 class="mt-3">Top Security</h4>
+            <p>Your data is encrypted using advanced security protocols.</p>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="feature-card p-4">
+            <i class="bi bi-shield-lock-fill text-success"></i>
+            <h4 class="mt-3">Privacy First</h4>
+            <p>Only you can access your passwords – we ensure zero data leaks.</p>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="feature-card p-4">
+            <i class="bi bi-cloud-arrow-down-fill text-warning"></i>
+            <h4 class="mt-3">Cloud Backup</h4>
+            <p>Access your passwords anytime, anywhere with secure cloud storage.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

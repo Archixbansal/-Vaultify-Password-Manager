@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Vaultify{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #0a0a0a;
+            color: white;
+            position: relative;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Poppins', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .content-wrapper {
+            flex: 1;
+        }
+
+        /* Neon Animated Blobs */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+        .blob {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.6;
+            animation: move 18s infinite ease-in-out;
+        }
+
+        .blob:nth-child(1) { top: 10%; left: 10%; background: rgba(0, 255, 255, 0.4); animation-delay: 0s; }
+        .blob:nth-child(2) { top: 60%; left: 70%; background: rgba(138, 43, 226, 0.4); animation-delay: 5s; }
+        .blob:nth-child(3) { top: 30%; left: 50%; background: rgba(0, 128, 255, 0.4); animation-delay: 10s; }
+
+        @keyframes move {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(40px, -50px) scale(1.2); }
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 12px 0;
+            font-size: 0.9rem;
+            background: #000;
+            color: #ccc;
+            border-top: 1px solid #222;
+        }
+
+        /* Floating Hamburger Menu */
+        .floating-menu {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .menu-btn {
+            background: rgba(0, 128, 255, 0.85);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 55px;
+            height: 55px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s ease;
+        }
+        .menu-btn:hover { transform: scale(1.1); }
+
+        .menu-items {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .menu-items a {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        /* Staggered animation */
+        .menu-items.show a {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .menu-items.show a:nth-child(1) { transition-delay: 0.05s; }
+        .menu-items.show a:nth-child(2) { transition-delay: 0.1s; }
+        .menu-items.show a:nth-child(3) { transition-delay: 0.15s; }
+        .menu-items.show a:nth-child(4) { transition-delay: 0.2s; }
+        .menu-items.show a:nth-child(5) { transition-delay: 0.25s; }
+
+        /* Hide default navbar on mobile */
+        @media (max-width: 768px) {
+            nav.navbar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="animated-bg">
+        <div class="blob"></div>
+        <div class="blob"></div>
+        <div class="blob"></div>
+    </div>
+
+    <!-- Navbar (Desktop Only) -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark d-none d-md-block">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">🔐 Vaultify</a>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
+                    {% if 'email' in session %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('add_password') }}">Add Password</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('view_passwords') }}">View Passwords</a></li>
+                        <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('logout') }}">Logout</a></li>
+                    {% else %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('register') }}">Register</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Floating Menu (Mobile) -->
+    <div class="floating-menu d-md-none">
+        <button class="menu-btn" id="menuToggle"><i class="bi bi-list"></i></button>
+        <div class="menu-items" id="menuItems">
+            <a href="{{ url_for('home') }}">🏠 Home</a>
+            {% if 'email' in session %}
+                <a href="{{ url_for('dashboard') }}">📊 Dashboard</a>
+                <a href="{{ url_for('add_password') }}">➕ Add Password</a>
+                <a href="{{ url_for('view_passwords') }}">🔑 View Passwords</a>
+                <a href="{{ url_for('logout') }}" class="text-danger">🚪 Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">🔑 Login</a>
+                <a href="{{ url_for('register') }}">📝 Register</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container my-4 content-wrapper">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        © 2025 Vaultify | Built with Flask & Bootstrap
+    </footer>
+
+    <script>
+        const menuBtn = document.getElementById("menuToggle");
+        const menuItems = document.getElementById("menuItems");
+
+        menuBtn.addEventListener("click", () => {
+            menuItems.classList.toggle("show");
+        });
+    </script>
+</body>
+</html>
