@@ -94,6 +94,16 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .menu-items.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
         }
 
         .menu-items a {
@@ -105,21 +115,11 @@
             text-decoration: none;
             font-size: 0.9rem;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            transition: background 0.3s;
         }
-
-        /* Staggered animation */
-        .menu-items.show a {
-            opacity: 1;
-            transform: translateY(0);
+        .menu-items a:hover {
+            background: rgba(255, 255, 255, 0.25);
         }
-        .menu-items.show a:nth-child(1) { transition-delay: 0.05s; }
-        .menu-items.show a:nth-child(2) { transition-delay: 0.1s; }
-        .menu-items.show a:nth-child(3) { transition-delay: 0.15s; }
-        .menu-items.show a:nth-child(4) { transition-delay: 0.2s; }
-        .menu-items.show a:nth-child(5) { transition-delay: 0.25s; }
 
         /* Hide default navbar on mobile */
         @media (max-width: 768px) {

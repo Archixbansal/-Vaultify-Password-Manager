@@ -27,8 +27,6 @@ Vaultify is a **secure password manager** built using **Flask**, featuring **AES
 ![Home Page](assets/home.jpg)
 
 
-*(Add your own screenshot image in an `assets` folder and update the link.)*
-
 ---
 
 ## ⚙️ Installation
