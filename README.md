@@ -40,7 +40,7 @@ cd Vaultify-Password-Manager
 
 ---
 
-🔮 Future Enhancements
+## 🔮 Future Enhancements
 Mobile-friendly UI (PWA support)
 Multi-user authentication with OTP-based login
 Cloud storage for encrypted vaults
@@ -48,12 +48,12 @@ Password generator with AI-based suggestions
 
 ---
 
-📝 License
+## 📝 License
 This project is licensed under the MIT License – feel free to modify and use it.
 
 ---
 
-Author
+## Author
 👩‍💻 Archi Bansal
 (4th Year CSE Student, Chandigarh University)
 
