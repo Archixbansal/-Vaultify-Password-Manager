@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Vaultify - Secure Password Manager",
+  "description": "Store, retrieve, and manage your passwords securely using Vaultify.",
+  "version": "1.0",
+  "icons": {
+    "48": "icons/vaultify.png.jpg",
+    "128": "icons/vaultify.png.jpg"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icons/vaultify-icon.png"
+  },
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://vaultify-password-manager.onrender.com/"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}

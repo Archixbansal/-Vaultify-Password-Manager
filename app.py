@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, url_for, Response
+from flask import Flask, render_template, request, redirect, session, url_for, Response, flash
 from pymongo import MongoClient
 from cryptography.fernet import Fernet
 from bson.objectid import ObjectId
@@ -26,6 +26,21 @@ cipher = Fernet(key)
 # Password hashing
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
+
+
+def mask_email(email):
+    user_part, domain = email.split("@")
+    if len(user_part) <= 2:
+        masked = user_part[0] + "*" + user_part[-1]
+    else:
+        masked = user_part[0] + "*" * (len(user_part) - 2) + user_part[-1]
+    return masked + "@" + domain
+
+def mask_username(username):
+    if len(username) <= 2:
+        return username[0] + "*" + username[-1]
+    return username[0] + "*" * (len(username) - 2) + username[-1]
+
 
 # Flask app setup
 app = Flask(__name__)
@@ -72,8 +87,16 @@ def register():
             message = "User already exists!"
         else:
             users_collection.insert_one({'name': name, 'email': email, 'password': hash_password(password)})
-            message = "Registered successfully!"
+            flash('Registered successfully! Redirecting to login page...')
+            return redirect(url_for('register_success'))
+
     return render_template('register.html', message=message)
+
+
+@app.route('/register-success')
+def register_success():
+    return render_template('register_success.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -157,10 +180,12 @@ def add_password():
         if existing:
             return render_template('add_password.html', message="This account already exists!")
         else:
+            masked_email = mask_email(session['email'])
+            masked_username = mask_username(username)
             passwords_collection.insert_one({
-                'user_email': session['email'],
+                'user_email': masked_email,
                 'account': account,
-                'username': username,
+                'username': masked_username,
                 'password': password,
                 'added_at': datetime.now()
             })
