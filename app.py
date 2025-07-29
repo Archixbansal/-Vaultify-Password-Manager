@@ -11,7 +11,10 @@ import csv
 import io
 from datetime import datetime
 import random
+
 from flask_cors import CORS
+
+app = Flask(__name__)
 CORS(app)
 
 # Load environment variables
