@@ -11,6 +11,8 @@ import csv
 import io
 from datetime import datetime
 import random
+from flask_cors import CORS
+CORS(app)
 
 # Load environment variables
 load_dotenv()
