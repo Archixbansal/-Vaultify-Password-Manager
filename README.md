@@ -34,7 +34,7 @@ Vaultify is a **secure password manager** built using **Flask**, featuring **AES
 
 ### **1. Clone the repository**
 ```bash
-git clone https://github.com/yourusername/Vaultify-Password-Manager.git
+git clone https://github.com/Archixbansal/Vaultify-Password-Manager.git
 cd Vaultify-Password-Manager
 ```
 
