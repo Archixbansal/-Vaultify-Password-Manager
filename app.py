@@ -185,17 +185,16 @@ def add_password():
         if existing:
             return render_template('add_password.html', message="This account already exists!")
         else:
-            masked_email = mask_email(session['email'])
-            masked_username = mask_username(username)
             passwords_collection.insert_one({
-                'user_email': masked_email,
+                'user_email': session['email'],  # no masking while saving
                 'account': account,
-                'username': masked_username,
+                'username': username,
                 'password': password,
                 'added_at': datetime.now()
             })
             return redirect(url_for('view_passwords'))
     return render_template('add_password.html')
+
 
 @app.route('/view_passwords')
 def view_passwords():
