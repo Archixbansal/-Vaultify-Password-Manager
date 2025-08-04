@@ -325,18 +325,21 @@ def export_passwords():
     response = Response(output.getvalue(), mimetype='text/csv')
     response.headers["Content-Disposition"] = "attachment; filename=passwords.csv"
     return response
-
-@app.route('/api/login', methods=['POST'])
-def api_login():
+@app.route("/api/login", methods=["POST"])
+def login():
     data = request.json
-    email = data.get('email')
-    password = data.get('password')
+    email = data.get("email")
+    password = data.get("password")
 
-    user = users_collection.find_one({'email': email, 'password': hash_password(password)})
-    if user:
-        token = generate_jwt(email)
-        return jsonify({'token': token, 'name': user['name']}), 200
-    return jsonify({'error': 'Invalid credentials'}), 401
+    if not email or not password:
+        return jsonify({"error": "Missing credentials"}), 400
+
+    user = users.find_one({ "email": email })
+    if not user or not check_password_hash(user["password"], password):
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    token = generate_jwt(email)
+    return jsonify({ "token": token }), 200
 
 @app.route('/api/add_password', methods=['POST'])
 @token_required
