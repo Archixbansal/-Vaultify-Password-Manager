@@ -23,6 +23,17 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
+# Flask app setup
+app = Flask(__name__)
+app.secret_key = 'archi19012004bansal'
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'supersecretjwt')
+
+# MongoDB setup
+client = MongoClient("mongodb+srv://archi:Archi1901@passwordmanager.8xndbd2.mongodb.net/?retryWrites=true&w=majority&appName=passwordManager")
+db = client['password_manager']
+users_collection = db['users']
+passwords_collection = db['saved_passwords']
+
 # Load environment variables
 load_dotenv()
 SENDER_EMAIL = os.getenv('EMAIL_USER')
@@ -53,10 +64,6 @@ def mask_username(username):
     return username[0] + "*" * (len(username) - 2) + username[-1]
 
 
-# Flask app setup
-app = Flask(__name__)
-app.secret_key = 'archi19012004bansal'
-JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'supersecretjwt')
 
 
 def generate_jwt(email):
@@ -326,46 +333,30 @@ def export_passwords():
     response = Response(output.getvalue(), mimetype='text/csv')
     response.headers["Content-Disposition"] = "attachment; filename=passwords.csv"
     return response
-
-
 @app.route("/api/login", methods=["POST"])
 def api_login():
     try:
-        print("Entered /api/login route", file=sys.stderr)
-
         data = request.json
         print("Received data:", data, file=sys.stderr)
 
         email = data.get("email")
         password = data.get("password")
 
-        print("Parsed email:", email, file=sys.stderr)
-        print("Parsed password:", password, file=sys.stderr)
-
         if not email or not password:
             return jsonify({"error": "Missing credentials"}), 400
 
-        user = users.find_one({ "email": email })
+        user = users_collection.find_one({ "email": email })  # ✅ FIXED
         print("User found:", user, file=sys.stderr)
 
-        if not user:
-            return jsonify({"error": "Invalid credentials"}), 401
-
-        # Safely print the hash for debugging
-        print("Stored password hash:", user["password"], file=sys.stderr)
-
-        if not check_password_hash(user["password"], password):
+        if not user or not check_password_hash(user["password"], password):
             return jsonify({"error": "Invalid credentials"}), 401
 
         token = generate_jwt(email)
-        print("Generated token:", token, file=sys.stderr)
-
         return jsonify({ "token": token }), 200
 
     except Exception as e:
         print("Error in /api/login:", str(e), file=sys.stderr)
         return jsonify({"error": "Server error"}), 500
-
 
 @app.route('/api/add_password', methods=['POST'])
 @token_required
