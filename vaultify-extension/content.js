@@ -7,53 +7,44 @@ function createSaveButton(inputField) {
   const btn = document.createElement("button");
   btn.innerText = "💾 Save to Vaultify";
   btn.className = "vaultify-save-btn";
-  Object.assign(btn.style, {
-    marginTop: "8px",
-    padding: "6px 10px",
-    backgroundColor: "#0078D4",
-    color: "#fff",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "14px",
-    display: "block",
-  });
+  btn.style.marginTop = "8px";
+  btn.style.padding = "6px 10px";
+  btn.style.backgroundColor = "#0078D4";
+  btn.style.color = "#fff";
+  btn.style.border = "none";
+  btn.style.borderRadius = "4px";
+  btn.style.cursor = "pointer";
+  btn.style.fontSize = "14px";
+  btn.style.display = "block";
 
   inputField.parentNode.insertBefore(btn, inputField.nextSibling);
 
   btn.addEventListener("click", async () => {
-    const allInputs = document.querySelectorAll("input");
-    let email = "";
-    let passwordOrOtp = inputField.value;
+    const form = inputField.closest("form");
+    if (!form) return alert("⚠️ Could not find form.");
 
-    for (const input of allInputs) {
+    const inputs = form.querySelectorAll("input");
+    let email = "";
+    let passwordOrOtp = "";
+
+    inputs.forEach(input => {
       const name = input.name?.toLowerCase() || "";
       const placeholder = input.placeholder?.toLowerCase() || "";
-      const type = input.type?.toLowerCase() || "";
 
       if (
-        type === "email" ||
+        input.type === "email" ||
         name.includes("email") ||
-        name.includes("user") ||
-        name.includes("login") ||
-        name.includes("id") ||
-        placeholder.includes("email") ||
-        placeholder.includes("user") ||
-        placeholder.includes("login")
+        name.includes("user")
       ) {
         email = input.value;
-        break;
-      }
-
-      // Try fallback: text field before the current input
-      if (
-        !email &&
-        type === "text" &&
-        input.compareDocumentPosition(inputField) & Node.DOCUMENT_POSITION_FOLLOWING
+      } else if (
+        input.type === "password" ||
+        name.includes("otp") ||
+        placeholder.includes("otp")
       ) {
-        email = input.value;
+        passwordOrOtp = input.value;
       }
-    }
+    });
 
     if (!email || !passwordOrOtp) {
       alert("⚠️ Missing email or password/OTP.");
@@ -72,13 +63,13 @@ function createSaveButton(inputField) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${token}`
           },
           body: JSON.stringify({
-            email,
-            password: passwordOrOtp,
-            website: window.location.hostname,
-          }),
+            account: window.location.hostname,
+            username: email,
+            password: passwordOrOtp
+          })
         });
 
         const data = await res.json();
@@ -117,7 +108,9 @@ function initObserver() {
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
-  detectRelevantInputs(); // Initial run
+
+  // Initial run
+  detectRelevantInputs();
 }
 
 if (document.readyState === "loading") {
