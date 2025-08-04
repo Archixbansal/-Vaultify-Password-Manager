@@ -13,6 +13,7 @@ import io
 from datetime import datetime
 import random
 import jwt
+import sys
 from functools import wraps
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 
@@ -328,19 +329,28 @@ def export_passwords():
 
 @app.route("/api/login", methods=["POST"])
 def api_login():
-    data = request.json
-    email = data.get("email")
-    password = data.get("password")
+    try:
+        data = request.json
+        print("Received data:", data, file=sys.stderr)
 
-    if not email or not password:
-        return jsonify({"error": "Missing credentials"}), 400
+        email = data.get("email")
+        password = data.get("password")
 
-    user = users.find_one({ "email": email })
-    if not user or not check_password_hash(user["password"], password):
-        return jsonify({"error": "Invalid credentials"}), 401
+        if not email or not password:
+            return jsonify({"error": "Missing credentials"}), 400
 
-    token = generate_jwt(email)
-    return jsonify({ "token": token }), 200
+        user = users.find_one({ "email": email })
+        print("User found:", user, file=sys.stderr)
+
+        if not user or not check_password_hash(user["password"], password):
+            return jsonify({"error": "Invalid credentials"}), 401
+
+        token = generate_jwt(email)
+        return jsonify({ "token": token }), 200
+
+    except Exception as e:
+        print("Error in /api/login:", str(e), file=sys.stderr)
+        return jsonify({"error": "Server error"}), 500
 
 
 @app.route('/api/add_password', methods=['POST'])
