@@ -7,44 +7,53 @@ function createSaveButton(inputField) {
   const btn = document.createElement("button");
   btn.innerText = "💾 Save to Vaultify";
   btn.className = "vaultify-save-btn";
-  btn.style.marginTop = "8px";
-  btn.style.padding = "6px 10px";
-  btn.style.backgroundColor = "#0078D4";
-  btn.style.color = "#fff";
-  btn.style.border = "none";
-  btn.style.borderRadius = "4px";
-  btn.style.cursor = "pointer";
-  btn.style.fontSize = "14px";
-  btn.style.display = "block";
+  Object.assign(btn.style, {
+    marginTop: "8px",
+    padding: "6px 10px",
+    backgroundColor: "#0078D4",
+    color: "#fff",
+    border: "none",
+    borderRadius: "4px",
+    cursor: "pointer",
+    fontSize: "14px",
+    display: "block",
+  });
 
   inputField.parentNode.insertBefore(btn, inputField.nextSibling);
 
   btn.addEventListener("click", async () => {
-    const form = inputField.closest("form");
-    if (!form) return alert("⚠️ Could not find form.");
-
-    const inputs = form.querySelectorAll("input");
+    const allInputs = document.querySelectorAll("input");
     let email = "";
-    let passwordOrOtp = "";
+    let passwordOrOtp = inputField.value;
 
-    inputs.forEach(input => {
+    for (const input of allInputs) {
       const name = input.name?.toLowerCase() || "";
       const placeholder = input.placeholder?.toLowerCase() || "";
+      const type = input.type?.toLowerCase() || "";
 
       if (
-        input.type === "email" ||
+        type === "email" ||
         name.includes("email") ||
-        name.includes("user")
+        name.includes("user") ||
+        name.includes("login") ||
+        name.includes("id") ||
+        placeholder.includes("email") ||
+        placeholder.includes("user") ||
+        placeholder.includes("login")
       ) {
         email = input.value;
-      } else if (
-        input.type === "password" ||
-        name.includes("otp") ||
-        placeholder.includes("otp")
-      ) {
-        passwordOrOtp = input.value;
+        break;
       }
-    });
+
+      // Try fallback: text field before the current input
+      if (
+        !email &&
+        type === "text" &&
+        input.compareDocumentPosition(inputField) & Node.DOCUMENT_POSITION_FOLLOWING
+      ) {
+        email = input.value;
+      }
+    }
 
     if (!email || !passwordOrOtp) {
       alert("⚠️ Missing email or password/OTP.");
@@ -63,13 +72,13 @@ function createSaveButton(inputField) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            account: window.location.hostname,
-            username: email,
-            password: passwordOrOtp
-          })
+            email,
+            password: passwordOrOtp,
+            website: window.location.hostname,
+          }),
         });
 
         const data = await res.json();
@@ -108,9 +117,7 @@ function initObserver() {
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
-
-  // Initial run
-  detectRelevantInputs();
+  detectRelevantInputs(); // Initial run
 }
 
 if (document.readyState === "loading") {
