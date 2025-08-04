@@ -1,5 +1,6 @@
+console.log("Vaultify content script loaded");
+
 function createSaveButton(passwordInput) {
-  // Avoid duplicate buttons
   if (document.getElementById("vaultify-save-btn")) return;
 
   const btn = document.createElement("button");
@@ -42,10 +43,8 @@ function createSaveButton(passwordInput) {
       return;
     }
 
-    // Retrieve JWT token
     chrome.storage.local.get(["token"], async (result) => {
       const token = result.token;
-
       if (!token) {
         alert("⚠️ Not logged in. Open extension popup and login first.");
         return;
@@ -58,11 +57,14 @@ function createSaveButton(passwordInput) {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ email, password, website: window.location.hostname })
+          body: JSON.stringify({
+            email,
+            password,
+            website: window.location.hostname
+          })
         });
 
         const data = await res.json();
-
         if (res.ok) {
           alert("✅ Credentials saved to Vaultify!");
         } else {
@@ -76,7 +78,7 @@ function createSaveButton(passwordInput) {
   });
 }
 
-// Automatically find and add button to password fields
+// Observe new DOM changes (good for SPAs)
 const observer = new MutationObserver(() => {
   const passwordFields = document.querySelectorAll('input[type="password"]');
   passwordFields.forEach(pw => createSaveButton(pw));
