@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request, redirect, session, url_for, Response, flash
+from flask import Flask, render_template, request, redirect, session, url_for, Response, flash, jsonify
 from pymongo import MongoClient
 from cryptography.fernet import Fernet
 from bson.objectid import ObjectId
 from flask_mail import Mail, Message
+
 from itsdangerous import URLSafeTimedSerializer
 import hashlib
 from dotenv import load_dotenv
@@ -11,6 +12,10 @@ import csv
 import io
 from datetime import datetime
 import random
+import jwt
+from functools import wraps
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+
 
 from flask_cors import CORS
 
@@ -50,6 +55,37 @@ def mask_username(username):
 # Flask app setup
 app = Flask(__name__)
 app.secret_key = 'archi19012004bansal'
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'supersecretjwt')
+
+
+def generate_jwt(email):
+    payload = {
+        'email': email,
+        'exp': datetime.utcnow() + timedelta(hours=2)
+    }
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
+
+
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'error': 'Token is missing'}), 401
+        try:
+            token = token.split(" ")[1]  # remove "Bearer"
+            data = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
+            current_user = users_collection.find_one({'email': data['email']})
+            if not current_user:
+                raise InvalidTokenError()
+        except ExpiredSignatureError:
+            return jsonify({'error': 'Token expired'}), 401
+        except Exception as e:
+            return jsonify({'error': 'Invalid token'}), 401
+        return f(current_user, *args, **kwargs)
+    return decorated
+
 
 # MongoDB setup
 client = MongoClient("mongodb+srv://archi:Archi1901@passwordmanager.8xndbd2.mongodb.net/?retryWrites=true&w=majority&appName=passwordManager")
@@ -289,6 +325,50 @@ def export_passwords():
     response = Response(output.getvalue(), mimetype='text/csv')
     response.headers["Content-Disposition"] = "attachment; filename=passwords.csv"
     return response
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+
+    user = users_collection.find_one({'email': email, 'password': hash_password(password)})
+    if user:
+        token = generate_jwt(email)
+        return jsonify({'token': token, 'name': user['name']}), 200
+    return jsonify({'error': 'Invalid credentials'}), 401
+
+@app.route('/api/add_password', methods=['POST'])
+@token_required
+def api_add_password(current_user):
+    data = request.json
+    account = data.get('account')
+    username = data.get('username')
+    password = cipher.encrypt(data.get('password').encode()).decode()
+
+    passwords_collection.insert_one({
+        'user_email': current_user['email'],
+        'account': account,
+        'username': username,
+        'password': password,
+        'added_at': datetime.now()
+    })
+    return jsonify({'message': 'Password added successfully'}), 201
+
+@app.route('/api/view_passwords', methods=['GET'])
+@token_required
+def api_view_passwords(current_user):
+    records = list(passwords_collection.find({'user_email': current_user['email']}))
+    result = []
+    for item in records:
+        result.append({
+            'account': item['account'],
+            'username': item['username'],
+            'password': cipher.decrypt(item['password'].encode()).decode(),
+            'added_at': item.get('added_at', datetime.now()).strftime('%d %b %Y, %I:%M %p')
+        })
+    return jsonify(result), 200
+
 
 if __name__ == "__main__":
     app.run(debug=True)
