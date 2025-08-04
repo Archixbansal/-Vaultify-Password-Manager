@@ -325,8 +325,9 @@ def export_passwords():
     response = Response(output.getvalue(), mimetype='text/csv')
     response.headers["Content-Disposition"] = "attachment; filename=passwords.csv"
     return response
+
 @app.route("/api/login", methods=["POST"])
-def login():
+def api_login():
     data = request.json
     email = data.get("email")
     password = data.get("password")
@@ -340,6 +341,7 @@ def login():
 
     token = generate_jwt(email)
     return jsonify({ "token": token }), 200
+
 
 @app.route('/api/add_password', methods=['POST'])
 @token_required
