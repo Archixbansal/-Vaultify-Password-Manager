@@ -327,14 +327,20 @@ def export_passwords():
     response.headers["Content-Disposition"] = "attachment; filename=passwords.csv"
     return response
 
+
 @app.route("/api/login", methods=["POST"])
 def api_login():
     try:
+        print("Entered /api/login route", file=sys.stderr)
+
         data = request.json
         print("Received data:", data, file=sys.stderr)
 
         email = data.get("email")
         password = data.get("password")
+
+        print("Parsed email:", email, file=sys.stderr)
+        print("Parsed password:", password, file=sys.stderr)
 
         if not email or not password:
             return jsonify({"error": "Missing credentials"}), 400
@@ -342,10 +348,18 @@ def api_login():
         user = users.find_one({ "email": email })
         print("User found:", user, file=sys.stderr)
 
-        if not user or not check_password_hash(user["password"], password):
+        if not user:
+            return jsonify({"error": "Invalid credentials"}), 401
+
+        # Safely print the hash for debugging
+        print("Stored password hash:", user["password"], file=sys.stderr)
+
+        if not check_password_hash(user["password"], password):
             return jsonify({"error": "Invalid credentials"}), 401
 
         token = generate_jwt(email)
+        print("Generated token:", token, file=sys.stderr)
+
         return jsonify({ "token": token }), 200
 
     except Exception as e:
