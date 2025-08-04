@@ -1,11 +1,12 @@
 console.log("Vaultify content script loaded");
 
-function createSaveButton(passwordInput) {
-  if (document.getElementById("vaultify-save-btn")) return;
+function createSaveButton(inputField) {
+  if (inputField.dataset.vaultifyAttached) return;
+  inputField.dataset.vaultifyAttached = "true";
 
   const btn = document.createElement("button");
   btn.innerText = "💾 Save to Vaultify";
-  btn.id = "vaultify-save-btn";
+  btn.className = "vaultify-save-btn";
   btn.style.marginTop = "8px";
   btn.style.padding = "6px 10px";
   btn.style.backgroundColor = "#0078D4";
@@ -16,30 +17,37 @@ function createSaveButton(passwordInput) {
   btn.style.fontSize = "14px";
   btn.style.display = "block";
 
-  passwordInput.parentNode.insertBefore(btn, passwordInput.nextSibling);
+  inputField.parentNode.insertBefore(btn, inputField.nextSibling);
 
   btn.addEventListener("click", async () => {
-    const form = passwordInput.closest("form");
+    const form = inputField.closest("form");
     if (!form) return alert("⚠️ Could not find form.");
 
     const inputs = form.querySelectorAll("input");
     let email = "";
-    let password = "";
+    let passwordOrOtp = "";
 
     inputs.forEach(input => {
+      const name = input.name?.toLowerCase() || "";
+      const placeholder = input.placeholder?.toLowerCase() || "";
+
       if (
         input.type === "email" ||
-        input.name.toLowerCase().includes("email") ||
-        input.name.toLowerCase().includes("user")
+        name.includes("email") ||
+        name.includes("user")
       ) {
         email = input.value;
-      } else if (input.type === "password") {
-        password = input.value;
+      } else if (
+        input.type === "password" ||
+        name.includes("otp") ||
+        placeholder.includes("otp")
+      ) {
+        passwordOrOtp = input.value;
       }
     });
 
-    if (!email || !password) {
-      alert("⚠️ Missing email or password.");
+    if (!email || !passwordOrOtp) {
+      alert("⚠️ Missing email or password/OTP.");
       return;
     }
 
@@ -51,16 +59,16 @@ function createSaveButton(passwordInput) {
       }
 
       try {
-        const res = await fetch("https://vaultify-password-manager.onrender.com/api/save-password", {
+        const res = await fetch("https://vaultify-password-manager.onrender.com/api/add_password", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`
           },
           body: JSON.stringify({
-            email,
-            password,
-            website: window.location.hostname
+            account: window.location.hostname,
+            username: email,
+            password: passwordOrOtp
           })
         });
 
@@ -78,10 +86,35 @@ function createSaveButton(passwordInput) {
   });
 }
 
-// Observe new DOM changes (good for SPAs)
-const observer = new MutationObserver(() => {
-  const passwordFields = document.querySelectorAll('input[type="password"]');
-  passwordFields.forEach(pw => createSaveButton(pw));
-});
+function detectRelevantInputs() {
+  const inputs = document.querySelectorAll("input");
+  inputs.forEach(input => {
+    const name = input.name?.toLowerCase() || "";
+    const placeholder = input.placeholder?.toLowerCase() || "";
 
-observer.observe(document.body, { childList: true, subtree: true });
+    if (
+      input.type === "password" ||
+      name.includes("otp") ||
+      placeholder.includes("otp")
+    ) {
+      createSaveButton(input);
+    }
+  });
+}
+
+function initObserver() {
+  const observer = new MutationObserver(() => {
+    detectRelevantInputs();
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Initial run
+  detectRelevantInputs();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initObserver);
+} else {
+  initObserver();
+}
