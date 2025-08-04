@@ -345,10 +345,10 @@ def api_login():
         if not email or not password:
             return jsonify({"error": "Missing credentials"}), 400
 
-        user = users_collection.find_one({ "email": email })  # ✅ FIXED
+        user = users_collection.find_one({ "email": email })
         print("User found:", user, file=sys.stderr)
 
-        if not user or not check_password_hash(user["password"], password):
+        if not user or user["password"] != hash_password(password):
             return jsonify({"error": "Invalid credentials"}), 401
 
         token = generate_jwt(email)
