@@ -59,6 +59,7 @@ function createSaveButton(inputField) {
 
     // Fallback: try to retrieve stored email if not found
     if (!email) {
+      console.log("📦 Trying to fetch stored email from storage...");
       email = await new Promise((resolve) => {
         chrome.storage.local.get(["lastEnteredEmail"], (result) => {
           resolve(result.lastEnteredEmail || "");
@@ -127,7 +128,7 @@ function detectRelevantInputs() {
       createSaveButton(input);
     }
 
-    // Also attach on possible email fields
+    // Also attach on possible email/user fields
     if (
       input.type === "email" ||
       name.includes("email") ||
@@ -135,7 +136,7 @@ function detectRelevantInputs() {
       placeholder.includes("email") ||
       placeholder.includes("user")
     ) {
-      input.addEventListener("blur", () => {
+      input.addEventListener("input", () => {
         if (input.value) {
           chrome.storage.local.set({ lastEnteredEmail: input.value });
         }
