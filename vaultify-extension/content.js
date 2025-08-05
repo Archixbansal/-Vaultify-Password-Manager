@@ -20,10 +20,9 @@ function createSaveButton(inputField) {
   inputField.parentNode.insertBefore(btn, inputField.nextSibling);
 
   btn.addEventListener("click", async () => {
-    const form = inputField.closest("form");
-    if (!form) return alert("⚠️ Could not find form.");
-
+    const form = inputField.closest("form") || document; // fallback to whole doc
     const inputs = form.querySelectorAll("input");
+
     let email = "";
     let passwordOrOtp = "";
 
@@ -31,12 +30,16 @@ function createSaveButton(inputField) {
       const name = input.name?.toLowerCase() || "";
       const placeholder = input.placeholder?.toLowerCase() || "";
       const type = input.type?.toLowerCase() || "";
+      const autocomplete = input.autocomplete?.toLowerCase() || "";
 
       // Improved email detection
       if (
         type === "email" ||
-        type === "text" &&
-        (name.includes("email") || name.includes("user") || placeholder.includes("email") || placeholder.includes("user"))
+        (type === "text" &&
+          (name.includes("email") ||
+            name.includes("user") ||
+            placeholder.includes("email") ||
+            placeholder.includes("user")))
       ) {
         email = input.value;
       }
@@ -44,8 +47,11 @@ function createSaveButton(inputField) {
       // Improved password/OTP detection
       if (
         type === "password" ||
-        name.includes("otp") || placeholder.includes("otp") ||
-        name.includes("pass") || placeholder.includes("pass")
+        name.includes("otp") ||
+        placeholder.includes("otp") ||
+        name.includes("pass") ||
+        placeholder.includes("pass") ||
+        autocomplete === "password"
       ) {
         passwordOrOtp = input.value;
       }
@@ -99,13 +105,15 @@ function detectRelevantInputs() {
   inputs.forEach(input => {
     const name = input.name?.toLowerCase() || "";
     const placeholder = input.placeholder?.toLowerCase() || "";
+    const autocomplete = input.autocomplete?.toLowerCase() || "";
 
     if (
       input.type === "password" ||
       name.includes("otp") ||
       placeholder.includes("otp") ||
       name.includes("pass") ||
-      placeholder.includes("pass")
+      placeholder.includes("pass") ||
+      autocomplete === "password"
     ) {
       createSaveButton(input);
     }
