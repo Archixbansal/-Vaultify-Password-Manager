@@ -20,19 +20,19 @@ function createSaveButton(inputField) {
   inputField.parentNode.insertBefore(btn, inputField.nextSibling);
 
   btn.addEventListener("click", async () => {
-    const form = inputField.closest("form") || document; // fallback to whole doc
+    const form = inputField.closest("form") || document;
     const inputs = form.querySelectorAll("input");
 
     let email = "";
     let passwordOrOtp = "";
 
-    inputs.forEach(input => {
+    inputs.forEach((input) => {
       const name = input.name?.toLowerCase() || "";
       const placeholder = input.placeholder?.toLowerCase() || "";
       const type = input.type?.toLowerCase() || "";
       const autocomplete = input.autocomplete?.toLowerCase() || "";
 
-      // Improved email detection
+      // Email detection
       if (
         type === "email" ||
         (type === "text" &&
@@ -42,9 +42,10 @@ function createSaveButton(inputField) {
             placeholder.includes("user")))
       ) {
         email = input.value;
+        chrome.storage.local.set({ tempEmail: email }); // store temporarily
       }
 
-      // Improved password/OTP detection
+      // Password/OTP detection
       if (
         type === "password" ||
         name.includes("otp") ||
@@ -60,49 +61,61 @@ function createSaveButton(inputField) {
     console.log("📧 Email detected:", email);
     console.log("🔑 Password/OTP detected:", passwordOrOtp);
 
-    if (!email || !passwordOrOtp) {
-      alert("⚠️ Missing email or password/OTP.");
+    if (!email) {
+      // Try to retrieve stored email
+      chrome.storage.local.get(["tempEmail"], (result) => {
+        email = result.tempEmail || "";
+        if (!email || !passwordOrOtp) {
+          alert("⚠️ Missing email or password/OTP.");
+          return;
+        }
+        saveToVaultify(email, passwordOrOtp);
+      });
+    } else {
+      saveToVaultify(email, passwordOrOtp);
+    }
+  });
+}
+
+function saveToVaultify(email, passwordOrOtp) {
+  chrome.storage.local.get(["token"], async (result) => {
+    const token = result.token;
+    if (!token) {
+      alert("⚠️ Not logged in. Open extension popup and login first.");
       return;
     }
 
-    chrome.storage.local.get(["token"], async (result) => {
-      const token = result.token;
-      if (!token) {
-        alert("⚠️ Not logged in. Open extension popup and login first.");
-        return;
-      }
+    try {
+      const res = await fetch("https://vaultify-password-manager.onrender.com/api/add_password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          account: window.location.hostname,
+          username: email,
+          password: passwordOrOtp,
+        }),
+      });
 
-      try {
-        const res = await fetch("https://vaultify-password-manager.onrender.com/api/add_password", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            account: window.location.hostname,
-            username: email,
-            password: passwordOrOtp
-          })
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-          alert("✅ Credentials saved to Vaultify!");
-        } else {
-          alert(`❌ Error: ${data.error || "Unable to save credentials."}`);
-        }
-      } catch (err) {
-        console.error(err);
-        alert("⚠️ Server error or unreachable.");
+      const data = await res.json();
+      if (res.ok) {
+        alert("✅ Credentials saved to Vaultify!");
+        chrome.storage.local.remove("tempEmail"); // clear stored email
+      } else {
+        alert(`❌ Error: ${data.error || "Unable to save credentials."}`);
       }
-    });
+    } catch (err) {
+      console.error(err);
+      alert("⚠️ Server error or unreachable.");
+    }
   });
 }
 
 function detectRelevantInputs() {
   const inputs = document.querySelectorAll("input");
-  inputs.forEach(input => {
+  inputs.forEach((input) => {
     const name = input.name?.toLowerCase() || "";
     const placeholder = input.placeholder?.toLowerCase() || "";
     const autocomplete = input.autocomplete?.toLowerCase() || "";
@@ -116,6 +129,21 @@ function detectRelevantInputs() {
       autocomplete === "password"
     ) {
       createSaveButton(input);
+    }
+
+    if (
+      input.type === "email" ||
+      (input.type === "text" &&
+        (name.includes("email") ||
+          name.includes("user") ||
+          placeholder.includes("email") ||
+          placeholder.includes("user")))
+    ) {
+      // Save email as soon as it's entered
+      input.addEventListener("blur", () => {
+        chrome.storage.local.set({ tempEmail: input.value });
+        console.log("📩 Stored email for later:", input.value);
+      });
     }
   });
 }
