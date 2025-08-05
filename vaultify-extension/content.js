@@ -30,21 +30,29 @@ function createSaveButton(inputField) {
     inputs.forEach(input => {
       const name = input.name?.toLowerCase() || "";
       const placeholder = input.placeholder?.toLowerCase() || "";
+      const type = input.type?.toLowerCase() || "";
 
+      // Improved email detection
       if (
-        input.type === "email" ||
-        name.includes("email") ||
-        name.includes("user")
+        type === "email" ||
+        type === "text" &&
+        (name.includes("email") || name.includes("user") || placeholder.includes("email") || placeholder.includes("user"))
       ) {
         email = input.value;
-      } else if (
-        input.type === "password" ||
-        name.includes("otp") ||
-        placeholder.includes("otp")
+      }
+
+      // Improved password/OTP detection
+      if (
+        type === "password" ||
+        name.includes("otp") || placeholder.includes("otp") ||
+        name.includes("pass") || placeholder.includes("pass")
       ) {
         passwordOrOtp = input.value;
       }
     });
+
+    console.log("📧 Email detected:", email);
+    console.log("🔑 Password/OTP detected:", passwordOrOtp);
 
     if (!email || !passwordOrOtp) {
       alert("⚠️ Missing email or password/OTP.");
@@ -95,7 +103,9 @@ function detectRelevantInputs() {
     if (
       input.type === "password" ||
       name.includes("otp") ||
-      placeholder.includes("otp")
+      placeholder.includes("otp") ||
+      name.includes("pass") ||
+      placeholder.includes("pass")
     ) {
       createSaveButton(input);
     }
