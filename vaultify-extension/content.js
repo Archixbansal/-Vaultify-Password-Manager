@@ -1,5 +1,3 @@
-let lastSavedPassword = null;
-
 function storeEmail(email) {
   if (email) {
     chrome.storage.local.set({ vaultify_email: email }, () => {
@@ -38,30 +36,34 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 3000);
 }
 
-let lastSavedPassword = null;
+// Main logic
+function setupFormListener() {
+  // Try to find the login/signup form(s)
+  const forms = document.querySelectorAll('form');
 
-// Listen for input event on password fields instead of interval scanning
-function setupPasswordListener() {
-  const emailInput = document.querySelector(
-    'input[type="email"], input[name="email"], input[id*="email"], input[autocomplete="username"]'
-  );
-  if (emailInput && emailInput.value) {
-    storeEmail(emailInput.value);
-  }
+  forms.forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      // Prevent default to check values before submission
+      // event.preventDefault();  // You can comment this to let form submit normally
 
-  const passwordInputs = document.querySelectorAll(
-    'input[type="password"], input[autocomplete="current-password"], input[autocomplete="one-time-code"]'
-  );
+      const emailInput = form.querySelector(
+        'input[type="email"], input[name="email"], input[id*="email"], input[autocomplete="username"]'
+      );
+      const passwordInput = form.querySelector(
+        'input[type="password"], input[autocomplete="current-password"], input[autocomplete="one-time-code"]'
+      );
 
-  passwordInputs.forEach((passwordInput) => {
-    passwordInput.addEventListener("input", () => {
-      const currentPassword = passwordInput.value;
-
-      if (!currentPassword || currentPassword === lastSavedPassword) {
-        return; // Ignore empty or duplicate saves
+      if (!emailInput || !passwordInput) {
+        console.warn('⚠️ Email or password field not found in form');
+        return;
       }
 
-      lastSavedPassword = currentPassword;
+      if (!emailInput.value || !passwordInput.value) {
+        console.warn('⚠️ Email or password field empty');
+        return;
+      }
+
+      storeEmail(emailInput.value);
 
       fetchStoredEmail((storedEmail) => {
         if (!storedEmail) {
@@ -73,7 +75,7 @@ function setupPasswordListener() {
         const creds = {
           account: window.location.hostname || "unknown",
           username: storedEmail,
-          password: currentPassword
+          password: passwordInput.value
         };
 
         chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
@@ -89,6 +91,6 @@ function setupPasswordListener() {
   });
 }
 
-// Run listener setup on page load and after some delay (for SPA apps)
-window.addEventListener("load", setupPasswordListener);
-setTimeout(setupPasswordListener, 3000);
+// Run on page load and after delay (for SPA)
+window.addEventListener('load', setupFormListener);
+setTimeout(setupFormListener, 3000);
