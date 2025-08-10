@@ -1,4 +1,5 @@
-// Store email in chrome.storage.local and sessionStorage for fallback
+let lastSavedPassword = null;
+
 function storeEmail(email) {
   if (email) {
     chrome.storage.local.set({ vaultify_email: email }, () => {
@@ -8,7 +9,6 @@ function storeEmail(email) {
   }
 }
 
-// Retrieve stored email from chrome.storage.local or sessionStorage
 function fetchStoredEmail(callback) {
   chrome.storage.local.get(["vaultify_email"], (result) => {
     const emailFromLocal = result.vaultify_email || "";
@@ -18,7 +18,6 @@ function fetchStoredEmail(callback) {
   });
 }
 
-// Show toast notification on page
 function showToast(message) {
   const toast = document.createElement("div");
   toast.innerText = message;
@@ -39,54 +38,57 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 3000);
 }
 
-// Flag to avoid multiple saves in same session
-let savedThisSession = false;
+let lastSavedPassword = null;
 
-// Scan for email and password fields
-function scanFields() {
-  if (savedThisSession) return;  // Already saved once, skip further saves
-
+// Listen for input event on password fields instead of interval scanning
+function setupPasswordListener() {
   const emailInput = document.querySelector(
     'input[type="email"], input[name="email"], input[id*="email"], input[autocomplete="username"]'
   );
-  const passwordInput = document.querySelector(
-    'input[type="password"], input[autocomplete="current-password"], input[autocomplete="one-time-code"]'
-  );
-
-  // If email input has a value, store it
   if (emailInput && emailInput.value) {
     storeEmail(emailInput.value);
   }
 
-  // If password input has value, fetch stored email and send credentials
-  if (passwordInput && passwordInput.value) {
-    fetchStoredEmail((storedEmail) => {
-      if (!storedEmail) {
-        console.warn("⚠️ No stored email found.");
-        showToast("⚠️ Vaultify: Missing email for password save.");
-        return;
+  const passwordInputs = document.querySelectorAll(
+    'input[type="password"], input[autocomplete="current-password"], input[autocomplete="one-time-code"]'
+  );
+
+  passwordInputs.forEach((passwordInput) => {
+    passwordInput.addEventListener("input", () => {
+      const currentPassword = passwordInput.value;
+
+      if (!currentPassword || currentPassword === lastSavedPassword) {
+        return; // Ignore empty or duplicate saves
       }
 
-      // Prepare credentials to send
-      const creds = {
-        account: window.location.hostname || "unknown",
-        username: storedEmail,
-        password: passwordInput.value
-      };
+      lastSavedPassword = currentPassword;
 
-      // Send message to background script to save password securely
-      chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error("Error sending message:", chrome.runtime.lastError);
-          showToast("⚠️ Vaultify: Failed to save password.");
-        } else {
-          showToast("✅ Vaultify: Password saved!");
-          savedThisSession = true;  // Mark as saved to avoid repeats
+      fetchStoredEmail((storedEmail) => {
+        if (!storedEmail) {
+          console.warn("⚠️ No stored email found.");
+          showToast("⚠️ Vaultify: Missing email for password save.");
+          return;
         }
+
+        const creds = {
+          account: window.location.hostname || "unknown",
+          username: storedEmail,
+          password: currentPassword
+        };
+
+        chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error("Error sending message:", chrome.runtime.lastError);
+            showToast("⚠️ Vaultify: Failed to save password.");
+          } else {
+            showToast("✅ Vaultify: Password saved!");
+          }
+        });
       });
     });
-  }
+  });
 }
 
-// Run the scan periodically every 2 seconds
-setInterval(scanFields, 2000);
+// Run listener setup on page load and after some delay (for SPA apps)
+window.addEventListener("load", setupPasswordListener);
+setTimeout(setupPasswordListener, 3000);
