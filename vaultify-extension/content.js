@@ -39,8 +39,13 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 3000);
 }
 
+// Flag to avoid multiple saves in same session
+let savedThisSession = false;
+
 // Scan for email and password fields
 function scanFields() {
+  if (savedThisSession) return;  // Already saved once, skip further saves
+
   const emailInput = document.querySelector(
     'input[type="email"], input[name="email"], input[id*="email"], input[autocomplete="username"]'
   );
@@ -76,6 +81,7 @@ function scanFields() {
           showToast("⚠️ Vaultify: Failed to save password.");
         } else {
           showToast("✅ Vaultify: Password saved!");
+          savedThisSession = true;  // Mark as saved to avoid repeats
         }
       });
     });
