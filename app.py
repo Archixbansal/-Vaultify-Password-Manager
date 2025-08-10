@@ -359,11 +359,22 @@ def api_login():
         return jsonify({"error": "Server error"}), 500
 
 @app.route('/api/add_password', methods=['POST'])
+
 @token_required
 def api_add_password(current_user):
     data = request.json
     account = data.get('account')
     username = data.get('username')
+
+    # Check if account + username already exists for this user
+    existing = passwords_collection.find_one({
+        'user_email': current_user['email'],
+        'account': account,
+        'username': username
+    })
+    if existing:
+        return jsonify({'error': 'This account already exists!'}), 409
+
     password = cipher.encrypt(data.get('password').encode()).decode()
 
     passwords_collection.insert_one({
@@ -374,6 +385,7 @@ def api_add_password(current_user):
         'added_at': datetime.now()
     })
     return jsonify({'message': 'Password added successfully'}), 201
+
 
 @app.route('/api/view_passwords', methods=['GET'])
 @token_required

@@ -38,13 +38,12 @@ function showToast(message) {
 
 // Main logic
 function setupFormListener() {
-  // Try to find the login/signup form(s)
+  // Find all forms on page
   const forms = document.querySelectorAll('form');
 
   forms.forEach((form) => {
     form.addEventListener('submit', (event) => {
-      // Prevent default to check values before submission
-      // event.preventDefault();  // You can comment this to let form submit normally
+      // Optional: event.preventDefault(); // Uncomment if you want to intercept submission fully
 
       const emailInput = form.querySelector(
         'input[type="email"], input[name="email"], input[id*="email"], input[autocomplete="username"]'
@@ -91,6 +90,6 @@ function setupFormListener() {
   });
 }
 
-// Run on page load and after delay (for SPA)
+// Run on page load and again after 3s (for SPA support)
 window.addEventListener('load', setupFormListener);
 setTimeout(setupFormListener, 3000);
