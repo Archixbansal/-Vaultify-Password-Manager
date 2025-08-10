@@ -3,13 +3,23 @@
   "name": "Vaultify - Password Manager",
   "version": "1.0",
   "description": "Secure password manager extension",
-  "permissions": ["storage", "scripting", "activeTab"],
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
   "host_permissions": [
-    "https://vaultify-password-manager.onrender.com/", "<all_urls>"
+    "https://vaultify-password-manager.onrender.com/*",
+    "<all_urls>"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_icon": "icons/vaultify.png"
+    "default_icon": {
+      "16": "icons/vaultify-16.png",
+      "32": "icons/vaultify-32.png",
+      "48": "icons/vaultify-48.png",
+      "128": "icons/vaultify-128.png"
+    }
   },
   "background": {
     "service_worker": "background.js"
