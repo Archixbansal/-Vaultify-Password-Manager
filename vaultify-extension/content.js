@@ -39,8 +39,8 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 3000);
 }
 
-// Cache to prevent duplicate saves
-let lastSaved = { account: "", username: "", password: "" };
+// Keep track of last saved credentials to avoid duplicate saves
+let lastSavedCreds = null;
 
 // Scan for email and password fields
 function scanFields() {
@@ -72,14 +72,12 @@ function scanFields() {
         password: passwordInput.value
       };
 
-      // Prevent duplicate save
-      if (
-        creds.account === lastSaved.account &&
-        creds.username === lastSaved.username &&
-        creds.password === lastSaved.password
-      ) {
-        return;
+      // Prevent saving duplicate credentials
+      const credsKey = JSON.stringify(creds);
+      if (credsKey === lastSavedCreds) {
+        return; // same creds already saved, skip
       }
+      lastSavedCreds = credsKey;
 
       // Send message to background script to save password securely
       chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
@@ -88,7 +86,6 @@ function scanFields() {
           showToast("⚠️ Vaultify: Failed to save password.");
         } else {
           showToast("✅ Vaultify: Password saved!");
-          lastSaved = creds; // Update cache
         }
       });
     });
