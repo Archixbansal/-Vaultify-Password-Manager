@@ -1,3 +1,5 @@
+console.log("🚀 Vaultify content script loaded!");
+
 // Store email in both chrome.storage.local and sessionStorage
 function storeEmail(email) {
   if (email) {
