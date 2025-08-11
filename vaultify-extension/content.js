@@ -1,3 +1,4 @@
+// ------------------ Storage Helpers ------------------
 function storeEmail(email) {
   if (email) {
     chrome.storage.local.set({ vaultify_email: email }, () => {
@@ -36,60 +37,76 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 3000);
 }
 
-// Main logic
-function setupFormListener() {
-  // Find all forms on page
-  const forms = document.querySelectorAll('form');
+// ------------------ Duplicate Tracker ------------------
+const savedCombinations = new Set(); // email+password per session
 
-  forms.forEach((form) => {
-    form.addEventListener('submit', (event) => {
-      // Optional: event.preventDefault(); // Uncomment if you want to intercept submission fully
+// ------------------ Main Logic ------------------
+function attachListenerToForm(form) {
+  if (form.dataset.vaultifyBound) return; // Already attached
 
-      const emailInput = form.querySelector(
-        'input[type="email"], input[name="email"], input[id*="email"], input[autocomplete="username"]'
-      );
-      const passwordInput = form.querySelector(
-        'input[type="password"], input[autocomplete="current-password"], input[autocomplete="one-time-code"]'
-      );
+  form.dataset.vaultifyBound = "true"; // Prevent multiple bindings
 
-      if (!emailInput || !passwordInput) {
-        console.warn('⚠️ Email or password field not found in form');
+  form.addEventListener("submit", () => {
+    const emailInput = form.querySelector(
+      'input[type="email"], input[name="email"], input[id*="email"], input[autocomplete="username"]'
+    );
+    const passwordInput = form.querySelector(
+      'input[type="password"], input[autocomplete="current-password"], input[autocomplete="one-time-code"]'
+    );
+
+    if (!emailInput || !passwordInput) {
+      console.warn("⚠️ Email or password field not found in form");
+      return;
+    }
+    if (!emailInput.value || !passwordInput.value) {
+      console.warn("⚠️ Email or password field empty");
+      return;
+    }
+
+    storeEmail(emailInput.value);
+
+    fetchStoredEmail((storedEmail) => {
+      if (!storedEmail) {
+        console.warn("⚠️ No stored email found.");
+        showToast("⚠️ Vaultify: Missing email for password save.");
         return;
       }
 
-      if (!emailInput.value || !passwordInput.value) {
-        console.warn('⚠️ Email or password field empty');
+      const comboKey = `${storedEmail}::${passwordInput.value}`;
+      if (savedCombinations.has(comboKey)) {
+        console.log("⏩ Skipping duplicate password save for this session.");
         return;
       }
+      savedCombinations.add(comboKey);
 
-      storeEmail(emailInput.value);
+      const creds = {
+        account: window.location.hostname || "unknown",
+        username: storedEmail,
+        password: passwordInput.value,
+      };
 
-      fetchStoredEmail((storedEmail) => {
-        if (!storedEmail) {
-          console.warn("⚠️ No stored email found.");
-          showToast("⚠️ Vaultify: Missing email for password save.");
-          return;
+      chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error("Error sending message:", chrome.runtime.lastError);
+          showToast("⚠️ Vaultify: Failed to save password.");
+        } else {
+          showToast("✅ Vaultify: Password saved!");
         }
-
-        const creds = {
-          account: window.location.hostname || "unknown",
-          username: storedEmail,
-          password: passwordInput.value
-        };
-
-        chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
-          if (chrome.runtime.lastError) {
-            console.error("Error sending message:", chrome.runtime.lastError);
-            showToast("⚠️ Vaultify: Failed to save password.");
-          } else {
-            showToast("✅ Vaultify: Password saved!");
-          }
-        });
       });
     });
   });
 }
 
-// Run on page load and again after 3s (for SPA support)
-window.addEventListener('load', setupFormListener);
-setTimeout(setupFormListener, 3000);
+function observeForms() {
+  const observer = new MutationObserver(() => {
+    document.querySelectorAll("form").forEach(attachListenerToForm);
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
+// ------------------ Init ------------------
+window.addEventListener("load", () => {
+  document.querySelectorAll("form").forEach(attachListenerToForm);
+  observeForms();
+});

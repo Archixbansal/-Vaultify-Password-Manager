@@ -366,6 +366,18 @@ def api_add_password(current_user):
     username = data.get('username')
     password = cipher.encrypt(data.get('password').encode()).decode()
 
+    # Check if password already exists for this user+account+username
+    existing = passwords_collection.find_one({
+        'user_email': current_user['email'],
+        'account': account,
+        'username': username,
+        'password': password
+    })
+
+    if existing:
+        return jsonify({'message': 'Password already exists'}), 409  # Conflict
+
+    # Insert only if not duplicate
     passwords_collection.insert_one({
         'user_email': current_user['email'],
         'account': account,
@@ -373,7 +385,9 @@ def api_add_password(current_user):
         'password': password,
         'added_at': datetime.now()
     })
+
     return jsonify({'message': 'Password added successfully'}), 201
+
 
 @app.route('/api/view_passwords', methods=['GET'])
 @token_required
