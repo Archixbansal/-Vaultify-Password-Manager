@@ -39,8 +39,11 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 3000);
 }
 
-// Function to scan and save password (only runs when manually triggered)
-function scanAndSavePassword() {
+// Cache to prevent duplicate saves
+let lastSaved = { account: "", username: "", password: "" };
+
+// Scan for email and password fields
+function scanFields() {
   const emailInput = document.querySelector(
     'input[type="email"], input[name="email"], input[id*="email"], input[autocomplete="username"]'
   );
@@ -48,12 +51,12 @@ function scanAndSavePassword() {
     'input[type="password"], input[autocomplete="current-password"], input[autocomplete="one-time-code"]'
   );
 
-  // Store email if found
+  // If email input has a value, store it
   if (emailInput && emailInput.value) {
     storeEmail(emailInput.value);
   }
 
-  // If password is entered, try saving
+  // If password input has value, fetch stored email and send credentials
   if (passwordInput && passwordInput.value) {
     fetchStoredEmail((storedEmail) => {
       if (!storedEmail) {
@@ -62,33 +65,35 @@ function scanAndSavePassword() {
         return;
       }
 
+      // Prepare credentials to send
       const creds = {
         account: window.location.hostname || "unknown",
         username: storedEmail,
         password: passwordInput.value
       };
 
+      // Prevent duplicate save
+      if (
+        creds.account === lastSaved.account &&
+        creds.username === lastSaved.username &&
+        creds.password === lastSaved.password
+      ) {
+        return;
+      }
+
+      // Send message to background script to save password securely
       chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
         if (chrome.runtime.lastError) {
           console.error("Error sending message:", chrome.runtime.lastError);
           showToast("⚠️ Vaultify: Failed to save password.");
-        } else if (response?.success) {
-          showToast("✅ Vaultify: Password saved!");
         } else {
-          showToast(`❌ Vaultify: ${response?.error || "Unknown error"}`);
+          showToast("✅ Vaultify: Password saved!");
+          lastSaved = creds; // Update cache
         }
       });
     });
-  } else {
-    showToast("⚠️ Vaultify: No password detected.");
   }
 }
 
-// OPTIONAL: Add a keyboard shortcut to save (Ctrl+Shift+S)
-document.addEventListener("keydown", (e) => {
-  if (e.ctrlKey && e.shiftKey && e.code === "KeyS") {
-    scanAndSavePassword();
-  }
-});
-
-// ❌ Removed setInterval — now password saving is manual
+// Run the scan periodically every 2 seconds
+setInterval(scanFields, 2000);
