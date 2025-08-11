@@ -1,4 +1,4 @@
-// ------------------ Storage Helpers ------------------
+// Store email in both chrome.storage.local and sessionStorage
 function storeEmail(email) {
   if (email) {
     chrome.storage.local.set({ vaultify_email: email }, () => {
@@ -8,6 +8,7 @@ function storeEmail(email) {
   }
 }
 
+// Fetch email from storage (local first, then session)
 function fetchStoredEmail(callback) {
   chrome.storage.local.get(["vaultify_email"], (result) => {
     const emailFromLocal = result.vaultify_email || "";
@@ -17,6 +18,7 @@ function fetchStoredEmail(callback) {
   });
 }
 
+// Show a toast message on the page
 function showToast(message) {
   const toast = document.createElement("div");
   toast.innerText = message;
@@ -37,76 +39,68 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 3000);
 }
 
-// ------------------ Duplicate Tracker ------------------
-const savedCombinations = new Set(); // email+password per session
+// Attach listeners to forms (only once per form)
+function attachFormListeners() {
+  const forms = document.querySelectorAll("form:not([data-vaultify-attached])");
 
-// ------------------ Main Logic ------------------
-function attachListenerToForm(form) {
-  if (form.dataset.vaultifyBound) return; // Already attached
+  forms.forEach((form) => {
+    form.dataset.vaultifyAttached = "true";
 
-  form.dataset.vaultifyBound = "true"; // Prevent multiple bindings
+    form.addEventListener("submit", () => {
+      console.log("📥 Form submit detected!");
 
-  form.addEventListener("submit", () => {
-    const emailInput = form.querySelector(
-      'input[type="email"], input[name="email"], input[id*="email"], input[autocomplete="username"]'
-    );
-    const passwordInput = form.querySelector(
-      'input[type="password"], input[autocomplete="current-password"], input[autocomplete="one-time-code"]'
-    );
+      const emailInput = form.querySelector(
+        'input[type="email"], input[name="email"], input[id*="email"], input[autocomplete="username"]'
+      );
+      const passwordInput = form.querySelector(
+        'input[type="password"], input[autocomplete="current-password"], input[autocomplete="one-time-code"]'
+      );
 
-    if (!emailInput || !passwordInput) {
-      console.warn("⚠️ Email or password field not found in form");
-      return;
-    }
-    if (!emailInput.value || !passwordInput.value) {
-      console.warn("⚠️ Email or password field empty");
-      return;
-    }
-
-    storeEmail(emailInput.value);
-
-    fetchStoredEmail((storedEmail) => {
-      if (!storedEmail) {
-        console.warn("⚠️ No stored email found.");
-        showToast("⚠️ Vaultify: Missing email for password save.");
+      if (!emailInput || !passwordInput) {
+        console.warn("⚠️ Email or password field not found.");
         return;
       }
 
-      const comboKey = `${storedEmail}::${passwordInput.value}`;
-      if (savedCombinations.has(comboKey)) {
-        console.log("⏩ Skipping duplicate password save for this session.");
+      if (!emailInput.value || !passwordInput.value) {
+        console.warn("⚠️ Email or password is empty.");
         return;
       }
-      savedCombinations.add(comboKey);
 
-      const creds = {
-        account: window.location.hostname || "unknown",
-        username: storedEmail,
-        password: passwordInput.value,
-      };
+      storeEmail(emailInput.value);
 
-      chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error("Error sending message:", chrome.runtime.lastError);
-          showToast("⚠️ Vaultify: Failed to save password.");
-        } else {
-          showToast("✅ Vaultify: Password saved!");
+      fetchStoredEmail((storedEmail) => {
+        if (!storedEmail) {
+          console.warn("⚠️ No stored email found.");
+          showToast("⚠️ Vaultify: Missing email for password save.");
+          return;
         }
+
+        const creds = {
+          account: window.location.hostname || "unknown",
+          username: storedEmail,
+          password: passwordInput.value
+        };
+
+        chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error("❌ Error sending message:", chrome.runtime.lastError);
+            showToast("⚠️ Vaultify: Failed to save password.");
+          } else {
+            console.log("✅ Vaultify: Password saved!");
+            showToast("✅ Vaultify: Password saved!");
+          }
+        });
       });
     });
   });
 }
 
-function observeForms() {
-  const observer = new MutationObserver(() => {
-    document.querySelectorAll("form").forEach(attachListenerToForm);
-  });
+// Run when the page loads
+window.addEventListener("load", attachFormListeners);
 
-  observer.observe(document.body, { childList: true, subtree: true });
-}
+// Also observe DOM changes (for SPA/dynamic forms)
+const observer = new MutationObserver(attachFormListeners);
+observer.observe(document, { childList: true, subtree: true });
 
-// ------------------ Init ------------------
-window.addEventListener("load", () => {
-  document.querySelectorAll("form").forEach(attachListenerToForm);
-  observeForms();
-});
+// Safety run after small delay
+setTimeout(attachFormListeners, 3000);
