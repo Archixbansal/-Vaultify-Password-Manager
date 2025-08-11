@@ -39,9 +39,6 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 3000);
 }
 
-// Keep track of last saved credentials to avoid duplicate saves
-let lastSavedCreds = null;
-
 // Scan for email and password fields
 function scanFields() {
   const emailInput = document.querySelector(
@@ -72,21 +69,26 @@ function scanFields() {
         password: passwordInput.value
       };
 
-      // Prevent saving duplicate credentials
       const credsKey = JSON.stringify(creds);
-      if (credsKey === lastSavedCreds) {
-        return; // same creds already saved, skip
-      }
-      lastSavedCreds = credsKey;
 
-      // Send message to background script to save password securely
-      chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error("Error sending message:", chrome.runtime.lastError);
-          showToast("⚠️ Vaultify: Failed to save password.");
-        } else {
-          showToast("✅ Vaultify: Password saved!");
+      // Check last saved creds from storage
+      chrome.storage.local.get(["vaultify_lastSavedCreds"], (result) => {
+        if (result.vaultify_lastSavedCreds === credsKey) {
+          return; // Already saved, skip
         }
+
+        // Update last saved creds in storage
+        chrome.storage.local.set({ vaultify_lastSavedCreds: credsKey });
+
+        // Send message to background script to save password securely
+        chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error("Error sending message:", chrome.runtime.lastError);
+            showToast("⚠️ Vaultify: Failed to save password.");
+          } else {
+            showToast("✅ Vaultify: Password saved!");
+          }
+        });
       });
     });
   }

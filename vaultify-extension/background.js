@@ -18,6 +18,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
 
+      // Check for duplicate credentials in storage
+      const credsKey = JSON.stringify(message.creds);
+      const lastSavedCreds = await getFromStorage("vaultify_lastSavedCreds");
+      if (lastSavedCreds === credsKey) {
+        console.log("⏩ Skipped duplicate save in background script");
+        sendResponse({ success: false, error: "Duplicate credentials" });
+        return;
+      }
+
+      // Update last saved creds in storage
+      chrome.storage.local.set({ vaultify_lastSavedCreds: credsKey });
+
       try {
         const response = await fetch("https://vaultify-password-manager.onrender.com/api/add_password", {
           method: "POST",
