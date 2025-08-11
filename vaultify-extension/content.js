@@ -14,6 +14,7 @@ function fetchStoredEmail(callback) {
     const emailFromLocal = result.vaultify_email || "";
     const emailFromSession = sessionStorage.getItem("vaultify_email") || "";
     const finalEmail = emailFromLocal || emailFromSession;
+    console.log("📤 Fetched stored email:", finalEmail);
     callback(finalEmail);
   });
 }
@@ -39,8 +40,11 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 3000);
 }
 
-// Scan for email and password fields
+let lastSavedCreds = null;
+
 function scanFields() {
+  console.log("🔍 Scanning page for fields...");
+
   const emailInput = document.querySelector(
     'input[type="email"], input[name="email"], input[id*="email"], input[autocomplete="username"]'
   );
@@ -48,13 +52,14 @@ function scanFields() {
     'input[type="password"], input[autocomplete="current-password"], input[autocomplete="one-time-code"]'
   );
 
-  // If email input has a value, store it
   if (emailInput && emailInput.value) {
+    console.log("📧 Email found in field:", emailInput.value);
     storeEmail(emailInput.value);
   }
 
-  // If password input has value, fetch stored email and send credentials
   if (passwordInput && passwordInput.value) {
+    console.log("🔑 Password found in field:", passwordInput.value);
+
     fetchStoredEmail((storedEmail) => {
       if (!storedEmail) {
         console.warn("⚠️ No stored email found.");
@@ -62,7 +67,6 @@ function scanFields() {
         return;
       }
 
-      // Prepare credentials to send
       const creds = {
         account: window.location.hostname || "unknown",
         username: storedEmail,
@@ -70,29 +74,27 @@ function scanFields() {
       };
 
       const credsKey = JSON.stringify(creds);
+      if (credsKey === lastSavedCreds) {
+        console.log("⏩ Duplicate credentials detected. Skipping save.");
+        return;
+      }
+      lastSavedCreds = credsKey;
 
-      // Check last saved creds from storage
-      chrome.storage.local.get(["vaultify_lastSavedCreds"], (result) => {
-        if (result.vaultify_lastSavedCreds === credsKey) {
-          return; // Already saved, skip
+      console.log("📡 Sending creds to background.js:", creds);
+
+      chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
+        console.log("📩 Response from background.js:", response);
+        if (chrome.runtime.lastError) {
+          console.error("Error sending message:", chrome.runtime.lastError);
+          showToast("⚠️ Vaultify: Failed to save password.");
+        } else if (response?.success) {
+          showToast("✅ Vaultify: Password saved!");
+        } else {
+          showToast("⚠️ Vaultify: Failed to save password.");
         }
-
-        // Update last saved creds in storage
-        chrome.storage.local.set({ vaultify_lastSavedCreds: credsKey });
-
-        // Send message to background script to save password securely
-        chrome.runtime.sendMessage({ action: "savePassword", creds }, (response) => {
-          if (chrome.runtime.lastError) {
-            console.error("Error sending message:", chrome.runtime.lastError);
-            showToast("⚠️ Vaultify: Failed to save password.");
-          } else {
-            showToast("✅ Vaultify: Password saved!");
-          }
-        });
       });
     });
   }
 }
 
-// Run the scan periodically every 2 seconds
 setInterval(scanFields, 2000);

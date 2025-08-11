@@ -1,14 +1,15 @@
-// Helper to get data from chrome.storage.local as a Promise
 function getFromStorage(key) {
   return new Promise((resolve) => {
     chrome.storage.local.get(key, (result) => {
+      console.log(`📦 Storage fetch: ${key} =`, result[key]);
       resolve(result[key]);
     });
   });
 }
 
-// Listen for messages from content script or popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("📩 Message received in background.js:", message);
+
   if (message.action === "savePassword") {
     (async () => {
       const token = await getFromStorage("token");
@@ -18,17 +19,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
 
-      // Check for duplicate credentials in storage
-      const credsKey = JSON.stringify(message.creds);
-      const lastSavedCreds = await getFromStorage("vaultify_lastSavedCreds");
-      if (lastSavedCreds === credsKey) {
-        console.log("⏩ Skipped duplicate save in background script");
-        sendResponse({ success: false, error: "Duplicate credentials" });
-        return;
-      }
-
-      // Update last saved creds in storage
-      chrome.storage.local.set({ vaultify_lastSavedCreds: credsKey });
+      console.log("🔐 Sending password to API with token:", token);
 
       try {
         const response = await fetch("https://vaultify-password-manager.onrender.com/api/add_password", {
@@ -40,8 +31,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           body: JSON.stringify(message.creds)
         });
 
+        const text = await response.text();
+        console.log("🌐 API raw response:", text);
+
         if (!response.ok) {
-          const text = await response.text();
           console.error("❌ Failed to save password:", text);
           sendResponse({ success: false, error: text });
         } else {
@@ -54,7 +47,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     })();
 
-    // Return true to indicate async sendResponse
-    return true;
+    return true; // keep sendResponse async alive
   }
 });
