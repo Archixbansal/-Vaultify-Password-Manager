@@ -35,8 +35,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.log("🌐 API raw response:", text);
 
         if (!response.ok) {
-          console.error("❌ Failed to save password:", text);
-          sendResponse({ success: false, error: text });
+          // Parse JSON error if possible
+          try {
+            const errorData = JSON.parse(text);
+            const errorMessage = errorData.message || "Failed to save password";
+            console.error("❌ Failed to save password:", errorMessage);
+            sendResponse({ success: false, error: errorMessage });
+          } catch (e) {
+            console.error("❌ Failed to save password:", text);
+            sendResponse({ success: false, error: text });
+          }
         } else {
           console.log("✅ Password saved successfully");
           sendResponse({ success: true });

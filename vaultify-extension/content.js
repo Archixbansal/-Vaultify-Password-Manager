@@ -19,6 +19,25 @@ function fetchStoredEmail(callback) {
   });
 }
 
+// Track saved domains to prevent duplicates
+function markDomainAsSaved(domain) {
+  chrome.storage.local.get(["saved_domains"], (result) => {
+    const savedDomains = result.saved_domains || [];
+    if (!savedDomains.includes(domain)) {
+      savedDomains.push(domain);
+      chrome.storage.local.set({ saved_domains: savedDomains });
+    }
+  });
+}
+
+// Check if domain has been saved
+function isDomainAlreadySaved(domain, callback) {
+  chrome.storage.local.get(["saved_domains"], (result) => {
+    const savedDomains = result.saved_domains || [];
+    callback(savedDomains.includes(domain));
+  });
+}
+
 // Show toast notification on page
 function showToast(message) {
   const toast = document.createElement("div");
@@ -40,45 +59,80 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 3000);
 }
 
-let lastSavedCreds = null;
+// Clear saved domains when URL changes
+let currentUrl = window.location.href;
+setInterval(() => {
+  if (window.location.href !== currentUrl) {
+    currentUrl = window.location.href;
+    // Clear saved domains for new page
+    chrome.storage.local.set({ saved_domains: [] });
+  }
+}, 1000);
 
-function scanFields() {
-  console.log("🔍 Scanning page for fields...");
+// Listen for form submissions instead of continuous scanning
+function setupFormListeners() {
+  // Find all forms on the page
+  const forms = document.querySelectorAll('form');
+  
+  forms.forEach(form => {
+    // Check if form contains password field
+    const passwordInput = form.querySelector('input[type="password"]');
+    if (passwordInput) {
+      form.addEventListener('submit', (e) => {
+        handleFormSubmission(form);
+      });
+      
+      // Also listen for login buttons that might trigger AJAX login
+      const loginButtons = form.querySelectorAll('button[type="submit"], input[type="submit"], button[id*="login"], button[class*="login"]');
+      loginButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+          setTimeout(() => handleFormSubmission(form), 1000); // Delay to allow form processing
+        });
+      });
+    }
+  });
+}
 
-  const emailInput = document.querySelector(
+// Handle form submission and save password
+function handleFormSubmission(form) {
+  const emailInput = form.querySelector(
     'input[type="email"], input[name="email"], input[id*="email"], input[autocomplete="username"]'
   );
-  const passwordInput = document.querySelector(
-    'input[type="password"], input[autocomplete="current-password"], input[autocomplete="one-time-code"]'
-  );
-
-  if (emailInput && emailInput.value) {
-    console.log("📧 Email found in field:", emailInput.value);
-    storeEmail(emailInput.value);
+  const passwordInput = form.querySelector('input[type="password"]');
+  
+  if (!passwordInput || !passwordInput.value) {
+    return;
   }
 
-  if (passwordInput && passwordInput.value) {
-    console.log("🔑 Password found in field:", passwordInput.value);
+  const domain = window.location.hostname;
+  
+  // Check if this domain has already been saved
+  isDomainAlreadySaved(domain, (alreadySaved) => {
+    if (alreadySaved) {
+      console.log("⏩ Domain already saved, skipping:", domain);
+      return;
+    }
 
     fetchStoredEmail((storedEmail) => {
-      if (!storedEmail) {
-        console.warn("⚠️ No stored email found.");
+      let username = storedEmail;
+      
+      // If no stored email, try to get from form
+      if (!username && emailInput && emailInput.value) {
+        username = emailInput.value;
+        storeEmail(username);
+      }
+      
+      if (!username) {
+        console.warn("⚠️ No username/email found.");
         showToast("⚠️ Vaultify: Missing email for password save.");
         return;
       }
 
       const creds = {
-        account: window.location.hostname || "unknown",
-        username: storedEmail,
+        account: domain,
+        username: username,
         password: passwordInput.value
       };
-
-      const credsKey = JSON.stringify(creds);
-      if (credsKey === lastSavedCreds) {
-        console.log("⏩ Duplicate credentials detected. Skipping save.");
-        return;
-      }
-      lastSavedCreds = credsKey;
 
       console.log("📡 Sending creds to background.js:", creds);
 
@@ -89,12 +143,37 @@ function scanFields() {
           showToast("⚠️ Vaultify: Failed to save password.");
         } else if (response?.success) {
           showToast("✅ Vaultify: Password saved!");
+          markDomainAsSaved(domain);
         } else {
           showToast("⚠️ Vaultify: Failed to save password.");
         }
       });
     });
-  }
+  });
 }
 
-setInterval(scanFields, 2000);
+// Initial setup when page loads
+function initializeExtension() {
+  console.log("🔍 Vaultify extension initialized");
+  
+  // Set up listeners for existing forms
+  setupFormListeners();
+  
+  // Also set up a MutationObserver to handle dynamically added forms
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.addedNodes.length > 0) {
+        setupFormListeners();
+      }
+    });
+  });
+  
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeExtension);
+} else {
+  initializeExtension();
+}
