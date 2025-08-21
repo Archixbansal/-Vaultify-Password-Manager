@@ -106,33 +106,37 @@ function handleFormSubmission(form) {
 
   const domain = window.location.hostname;
   
-  // Check if this domain has already been saved
-  isDomainAlreadySaved(domain, (alreadySaved) => {
-    if (alreadySaved) {
-      console.log("⏩ Domain already saved, skipping:", domain);
+  fetchStoredEmail((storedEmail) => {
+    let username = storedEmail;
+    
+    // If no stored email, try to get from form
+    if (!username && emailInput && emailInput.value) {
+      username = emailInput.value;
+      storeEmail(username);
+    }
+    
+    if (!username) {
+      console.warn("⚠️ No username/email found.");
+      showToast("⚠️ Vaultify: Missing email for password save.");
       return;
     }
 
-    fetchStoredEmail((storedEmail) => {
-      let username = storedEmail;
-      
-      // If no stored email, try to get from form
-      if (!username && emailInput && emailInput.value) {
-        username = emailInput.value;
-        storeEmail(username);
-      }
-      
-      if (!username) {
-        console.warn("⚠️ No username/email found.");
-        showToast("⚠️ Vaultify: Missing email for password save.");
+    const creds = {
+      account: domain,
+      username: username,
+      password: passwordInput.value
+    };
+
+    // Check for exact duplicate credentials
+    const credsKey = JSON.stringify(creds);
+    
+    // Check if these exact credentials have been saved
+    chrome.storage.local.get(["saved_credentials"], (result) => {
+      const savedCreds = result.saved_credentials || [];
+      if (savedCreds.includes(credsKey)) {
+        console.log("⏩ Exact credentials already saved, skipping:", domain);
         return;
       }
-
-      const creds = {
-        account: domain,
-        username: username,
-        password: passwordInput.value
-      };
 
       console.log("📡 Sending creds to background.js:", creds);
 
@@ -143,7 +147,12 @@ function handleFormSubmission(form) {
           showToast("⚠️ Vaultify: Failed to save password.");
         } else if (response?.success) {
           showToast("✅ Vaultify: Password saved!");
-          markDomainAsSaved(domain);
+          // Store the credentials to prevent duplicates
+          chrome.storage.local.get(["saved_credentials"], (result) => {
+            const savedCreds = result.saved_credentials || [];
+            savedCreds.push(credsKey);
+            chrome.storage.local.set({ saved_credentials: savedCreds });
+          });
         } else {
           showToast("⚠️ Vaultify: Failed to save password.");
         }
