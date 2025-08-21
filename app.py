@@ -366,16 +366,7 @@ def api_add_password(current_user):
     username = data.get('username')
     password = cipher.encrypt(data.get('password').encode()).decode()
 
-    # Check if password already exists for this user+account (domain-level deduplication)
-    existing = passwords_collection.find_one({
-        'user_email': current_user['email'],
-        'account': account
-    })
-
-    if existing:
-        return jsonify({'message': 'Password already exists for this website'}), 409  # Conflict
-
-    # Also check for exact duplicate credentials
+    # Check for exact duplicate credentials only
     exact_duplicate = passwords_collection.find_one({
         'user_email': current_user['email'],
         'account': account,
