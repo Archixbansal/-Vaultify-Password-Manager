@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showMessage("Logging in...");
 
         try {
-          const res = await fetch("https://vaultify-password-manager.onrender.com/api/login", {
+          const res = await fetch("http://localhost:5000/api/login", {
             method: "POST",
             headers: {
               "Content-Type": "application/json"

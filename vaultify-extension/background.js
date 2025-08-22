@@ -22,7 +22,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       console.log("🔐 Sending password to API with token:", token);
 
       try {
-        const response = await fetch("https://vaultify-password-manager.onrender.com/api/add_password", {
+        const response = await fetch("http://localhost:5000/api/add_password", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
